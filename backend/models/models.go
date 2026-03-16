@@ -61,5 +61,6 @@ type OrderItem struct {
     Price     int       `json:"price"`
     Quantity  int       `json:"quantity"`
     Size      *string   `json:"size,omitempty"`
+    ImageUrl  string    `json:"imageUrl"`  
     CreatedAt time.Time `json:"createdAt"`
 }

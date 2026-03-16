@@ -96,6 +96,14 @@ const logout = async () => {
   router.push("/");
 };
 
+const refreshCart = async () => {
+  if (user.value) {
+    cart.value = await getCart();
+  } else {
+    cart.value = [];
+  }
+};
+
 const totalPrice = computed(() =>
   cart.value.reduce((acc, item) => acc + item.price * item.quantity, 0),
 );
@@ -110,11 +118,11 @@ provide("cart", {
   openDrawer: () => (drawerOpen.value = true),
   addToCart: async (productId, size, quantity) => {
     await apiAddToCart(productId, size, quantity);
-    cart.value = await getCart(); // перезагружаем корзину
+    await refreshCart();
   },
   removeFromCart: async (itemId) => {
     await apiRemoveFromCart(itemId);
-    cart.value = await getCart();
+    await refreshCart();
   },
   updateCartQuantity: async (itemId, quantity) => {
     if (quantity <= 0) {
@@ -122,10 +130,10 @@ provide("cart", {
     } else {
       await apiUpdateCartItem(itemId, quantity);
     }
-    cart.value = await getCart();
+    await refreshCart();
   },
+  refreshCart, // новый метод
 });
-
 provide("favorites", {
   favorites,
   toggleFavorite: async (product) => {

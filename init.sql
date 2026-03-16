@@ -54,6 +54,7 @@ CREATE TABLE order_items (
     price INTEGER NOT NULL,
     quantity INTEGER NOT NULL,
     size VARCHAR(10),
+    image_url TEXT,            
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

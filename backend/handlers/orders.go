@@ -33,9 +33,9 @@ func GetOrders(db *sql.DB) http.HandlerFunc {
                 continue
             }
 
-            // Загружаем элементы заказа
+            // Загружаем элементы заказа с image_url
             itemRows, err := db.Query(`
-                SELECT id, product_id, title, price, quantity, size, created_at
+                SELECT id, product_id, title, price, quantity, size, image_url, created_at
                 FROM order_items
                 WHERE order_id = $1`, o.ID)
             if err == nil {
@@ -43,7 +43,10 @@ func GetOrders(db *sql.DB) http.HandlerFunc {
                 for itemRows.Next() {
                     var oi models.OrderItem
                     oi.OrderID = o.ID
-                    itemRows.Scan(&oi.ID, &oi.ProductID, &oi.Title, &oi.Price, &oi.Quantity, &oi.Size, &oi.CreatedAt)
+                    err := itemRows.Scan(&oi.ID, &oi.ProductID, &oi.Title, &oi.Price, &oi.Quantity, &oi.Size, &oi.ImageUrl, &oi.CreatedAt)
+                    if err != nil {
+                        continue
+                    }
                     items = append(items, oi)
                 }
                 o.Items = items
@@ -61,9 +64,9 @@ func CreateOrder(db *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         userID := middleware.GetUserID(r)
 
-        // Получаем корзину пользователя
+        // Получаем корзину пользователя с image_url
         rows, err := db.Query(`
-            SELECT c.product_id, c.size, c.quantity, p.title, p.price
+            SELECT c.product_id, c.size, c.quantity, p.title, p.price, p.image_url
             FROM cart c
             JOIN products p ON c.product_id = p.id
             WHERE c.user_id = $1`, userID)
@@ -79,12 +82,16 @@ func CreateOrder(db *sql.DB) http.HandlerFunc {
             Quantity  int
             Title     string
             Price     int
+            ImageUrl  string
         }
         items := []cartItem{}
         totalPrice := 0
         for rows.Next() {
             var ci cartItem
-            rows.Scan(&ci.ProductID, &ci.Size, &ci.Quantity, &ci.Title, &ci.Price)
+            err := rows.Scan(&ci.ProductID, &ci.Size, &ci.Quantity, &ci.Title, &ci.Price, &ci.ImageUrl)
+            if err != nil {
+                continue
+            }
             items = append(items, ci)
             totalPrice += ci.Price * ci.Quantity
         }
@@ -122,9 +129,9 @@ func CreateOrder(db *sql.DB) http.HandlerFunc {
 
         for _, item := range items {
             _, err = tx.Exec(`
-                INSERT INTO order_items (order_id, product_id, title, price, quantity, size, created_at)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-                orderID, item.ProductID, item.Title, item.Price, item.Quantity, item.Size, time.Now())
+                INSERT INTO order_items (order_id, product_id, title, price, quantity, size, image_url, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                orderID, item.ProductID, item.Title, item.Price, item.Quantity, item.Size, item.ImageUrl, time.Now())
             if err != nil {
                 tx.Rollback()
                 http.Error(w, err.Error(), http.StatusInternalServerError)
