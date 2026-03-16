@@ -3,14 +3,7 @@ import { inject, ref } from "vue";
 import { useRouter } from "vue-router";
 import { createOrder } from "../utils/orders";
 
-const {
-  cart,
-  totalPrice,
-  vatPrice,
-  closeDrawer,
-  removeFromCart,
-  updateCartQuantity,
-} = inject("cart");
+const { cart, totalPrice, vatPrice, closeDrawer, refreshCart } = inject("cart");
 const { user } = inject("auth");
 const router = useRouter();
 const isCreatingOrder = ref(false);
@@ -38,6 +31,7 @@ const handleCreateOrder = async () => {
   isCreatingOrder.value = true;
   try {
     await createOrder();
+    await refreshCart();
     alert("Заказ успешно оформлен!");
     closeDrawer();
   } catch (error) {
@@ -172,9 +166,7 @@ const totalItems = () =>
 
                 <div class="flex items-center gap-4">
                   <span class="font-bold text-right min-w-[100px]">
-                    {{
-                      (item.price * item.quantity).toLocaleString("ru-RU")
-                    }}
+                    {{ (item.price * item.quantity).toLocaleString("ru-RU") }}
                     руб.
                   </span>
                   <button
