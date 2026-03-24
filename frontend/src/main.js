@@ -8,6 +8,7 @@ import Favorites from "./pages/Favorites.vue";
 import Register from "./pages/Register.vue";
 import Login from "./pages/Login.vue";
 import Profile from "./pages/Profile.vue";
+import Payment from "./pages/Payment.vue";
 
 const app = createApp(App);
 
@@ -17,6 +18,7 @@ const routes = [
   { path: "/register", name: "Register", component: Register },
   { path: "/login", name: "Login", component: Login },
   { path: "/profile", name: "Profile", component: Profile },
+  { path: '/payment', name: 'Payment', component: Payment },
 ];
 
 const router = createRouter({
