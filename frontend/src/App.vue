@@ -132,7 +132,7 @@ provide("cart", {
     }
     await refreshCart();
   },
-  refreshCart, // новый метод
+  refreshCart, // уже есть
 });
 provide("favorites", {
   favorites,
