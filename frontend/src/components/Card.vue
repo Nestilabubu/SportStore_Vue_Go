@@ -10,15 +10,14 @@ const props = defineProps({
   isAdded: Boolean,
   onClickAdd: Function,
   onClickFav: Function,
+  onRemove: Function,
   category: String,
   availableSizes: Array,
 });
 
 const emit = defineEmits(["addToFavorite", "addToCart"]);
-
 const cart = inject("cart");
 const selectedSize = ref(props.availableSizes?.[0] || "");
-
 const localIsFavorite = ref(props.isFavorite);
 const localIsAdded = ref(props.isAdded);
 
@@ -27,7 +26,7 @@ watch(
   (newValue) => {
     localIsFavorite.value = newValue;
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 watch(
@@ -35,7 +34,7 @@ watch(
   (newValue) => {
     localIsAdded.value = newValue;
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const checkFavoriteFromStorage = () => {
@@ -44,7 +43,6 @@ const checkFavoriteFromStorage = () => {
     localIsFavorite.value = false;
     return;
   }
-
   const favoritesKey = `favorites_${user.id}`;
   const savedFavorites = JSON.parse(localStorage.getItem(favoritesKey) || "[]");
   localIsFavorite.value = savedFavorites.some((fav) => fav.id === props.id);
@@ -53,7 +51,7 @@ const checkFavoriteFromStorage = () => {
 watch(selectedSize, (newSize) => {
   if (props.id) {
     const savedSizes = JSON.parse(
-      localStorage.getItem("selectedSizes") || "{}"
+      localStorage.getItem("selectedSizes") || "{}",
     );
     savedSizes[props.id] = newSize;
     localStorage.setItem("selectedSizes", JSON.stringify(savedSizes));
@@ -86,7 +84,6 @@ const handleFavoriteClick = () => {
   if (props.onClickFav) {
     localIsFavorite.value = !localIsFavorite.value;
     props.onClickFav();
-
     setTimeout(checkFavoriteFromStorage, 100);
   }
 };
@@ -102,20 +99,29 @@ const handleAddToCart = () => {
       selectedSize: selectedSize.value,
       isAdded: !localIsAdded.value,
     };
-
     props.onClickAdd(itemData);
+  }
+};
+
+const handleRemove = () => {
+  if (props.onRemove) {
+    props.onRemove({
+      id: props.id,
+      title: props.title,
+      price: props.price,
+      imageUrl: props.imgUrl,
+      category: props.category,
+    });
   }
 };
 
 onMounted(() => {
   checkFavoriteFromStorage();
-
   const handleStorageChange = (event) => {
     if (event.key && event.key.startsWith("favorites_")) {
       checkFavoriteFromStorage();
     }
   };
-
   window.addEventListener("storage", handleStorageChange);
 });
 </script>
@@ -178,13 +184,29 @@ onMounted(() => {
         <span class="text-slate-400 text-sm">Цена:</span>
         <b class="text-xl text-gray-800">{{ price }} руб.</b>
       </div>
-      <img
-        v-if="onClickAdd"
-        @click="handleAddToCart"
-        :src="localIsAdded ? '/checked.svg' : '/plus.svg'"
-        alt="Добавить в корзину"
-        class="w-8 h-8 cursor-pointer hover:scale-110 transition"
-      />
+      <div class="flex gap-2">
+        <img
+          v-if="onClickAdd"
+          @click="handleAddToCart"
+          :src="localIsAdded ? '/checked.svg' : '/plus.svg'"
+          alt="Добавить в корзину"
+          class="w-8 h-8 cursor-pointer hover:scale-110 transition"
+        />
+        <svg
+          v-if="onRemove"
+          @click="handleRemove"
+          xmlns="http://www.w3.org/2000/svg"
+          class="w-7 h-7 cursor-pointer hover:scale-110 transition text-red-500 border-2 rounded-xl"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </div>
     </div>
   </div>
 </template>

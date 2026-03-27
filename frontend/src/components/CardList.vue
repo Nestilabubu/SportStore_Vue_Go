@@ -4,6 +4,7 @@ import Card from "./Card.vue";
 defineProps({
   items: Array,
   isFavorites: Boolean,
+  onRemove: Function,
 });
 
 const emit = defineEmits(["addToFavorite", "addToCart"]);
@@ -38,6 +39,7 @@ const handleAddToFavorite = (item) => {
                   item.selectedSize || item.availableSizes?.[0] || '',
               })
       "
+      :on-remove="isFavorites ? () => onRemove?.(item) : null"
       :is-favorite="item.isFavorite"
       :is-added="item.isAdded"
     />
