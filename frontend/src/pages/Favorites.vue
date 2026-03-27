@@ -1,15 +1,26 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed, inject } from "vue";
 import { useRouter } from "vue-router";
-import { inject } from "vue";
 import CardList from "../components/CardList.vue";
 
 const { favorites, toggleFavorite } = inject("favorites");
 const { addToCart } = inject("cart");
 const router = useRouter();
 const isLoading = ref(false);
+const selectedCategory = ref("all");
 
-// При монтировании проверяем авторизацию (inject уже содержит favorites, но он мог быть пуст, если не авторизован)
+const categories = computed(() => {
+  const cats = new Set(favorites.value.map((item) => item.category));
+  return Array.from(cats).sort();
+});
+
+const filteredFavorites = computed(() => {
+  if (selectedCategory.value === "all") return favorites.value;
+  return favorites.value.filter(
+    (item) => item.category === selectedCategory.value,
+  );
+});
+
 onMounted(() => {
   if (!favorites.value) {
     router.push("/login");
@@ -19,22 +30,59 @@ onMounted(() => {
 const removeFavorite = async (product) => {
   await toggleFavorite(product);
 };
+
+const removeAllFavorites = async () => {
+  if (!confirm("Вы уверены, что хотите удалить все закладки?")) return;
+  isLoading.value = true;
+  try {
+    for (const item of favorites.value) {
+      await toggleFavorite(item);
+    }
+  } catch (error) {
+    console.error("Ошибка удаления всех избранных", error);
+  } finally {
+    isLoading.value = false;
+  }
+};
 </script>
 
 <template>
   <div class="max-w-8xl mx-auto">
     <div class="mb-10">
-      <h1 class="text-3xl font-bold text-gray-800">Мои закладки</h1>
-      <p class="text-gray-600 mt-2">
-        Товары, которые вы сохранили для покупки позже
-      </p>
+      <div class="flex justify-between items-start">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-800">Мои закладки</h1>
+          <p class="text-gray-600 mt-2">
+            Товары, которые вы сохранили для покупки позже
+          </p>
+        </div>
+        <button
+          v-if="favorites?.length"
+          @click="removeAllFavorites"
+          class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-sm"
+        >
+          Очистить все
+        </button>
+      </div>
+    </div>
+
+    <div v-if="favorites?.length && categories.length" class="mb-6">
+      <select
+        v-model="selectedCategory"
+        class="py-2 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="all">Все категории</option>
+        <option v-for="cat in categories" :key="cat" :value="cat">
+          {{ cat }}
+        </option>
+      </select>
     </div>
 
     <div v-if="isLoading" class="text-center py-12">
       <div
         class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"
       ></div>
-      <p class="mt-4 text-gray-600">Загрузка закладок...</p>
+      <p class="mt-4 text-gray-600">Загрузка...</p>
     </div>
 
     <div v-else-if="!favorites?.length" class="text-center py-12">
@@ -52,10 +100,16 @@ const removeFavorite = async (product) => {
     </div>
 
     <div v-else>
+      <p class="text-gray-600 mb-4">
+        Показано {{ filteredFavorites.length }} из
+        {{ favorites.length }} закладок
+      </p>
       <CardList
-        :items="favorites.map((item) => ({ ...item, isFavorite: true }))"
+        :items="
+          filteredFavorites.map((item) => ({ ...item, isFavorite: true }))
+        "
         is-favorites
-        @add-to-favorite="removeFavorite"
+        :on-remove="removeFavorite"
         @add-to-cart="
           (product) =>
             addToCart(
