@@ -43,7 +43,6 @@ func UpdateProfile(db *sql.DB) http.HandlerFunc {
             return
         }
 
-        // Динамическое обновление только переданных полей
         if req.FullName != nil {
             db.Exec("UPDATE users SET full_name = $1 WHERE id = $2", *req.FullName, userID)
         }

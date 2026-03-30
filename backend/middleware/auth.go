@@ -2,70 +2,53 @@ package middleware
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
-
-	"github.com/gorilla/sessions"
+	"sportshop-backend/db"
+	"time"
 )
 
-var store *sessions.CookieStore
+type contextKey string
 
-const sessionName = "sportshop-session"
+const UserIDKey contextKey = "userID"
 
-func InitSessionStore(key []byte) {
-    store = sessions.NewCookieStore(key)
-    store.Options = &sessions.Options{
-        Path:     "/",
-        MaxAge:   86400 * 7, // 7 дней
-        HttpOnly: true,
-        Secure:   false, // для dev http
-        SameSite: http.SameSiteLaxMode,
+func AuthRequired(dbConn *sql.DB) func(http.Handler) http.Handler {
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            cookie, err := r.Cookie("session_token")
+            if err != nil {
+                http.Error(w, "Unauthorized", http.StatusUnauthorized)
+                return
+            }
+
+            _, userID, _, err := db.GetSessionByToken(dbConn, cookie.Value)
+            if err != nil {
+                http.Error(w, "Unauthorized", http.StatusUnauthorized)
+                return
+            }
+
+            newExpiry := time.Now().Add(15 * time.Minute)
+            db.UpdateSessionExpiry(dbConn, cookie.Value, newExpiry)
+
+            http.SetCookie(w, &http.Cookie{
+                Name:     "session_token",
+                Value:    cookie.Value,
+                Path:     "/",
+                HttpOnly: true,
+                SameSite: http.SameSiteLaxMode,
+                MaxAge:   86400,
+            })
+
+            ctx := context.WithValue(r.Context(), UserIDKey, userID)
+            next.ServeHTTP(w, r.WithContext(ctx))
+        })
     }
-}
-
-func AuthRequired(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        session, err := store.Get(r, sessionName)
-        if err != nil {
-            http.Error(w, "Unauthorized", http.StatusUnauthorized)
-            return
-        }
-        userID, ok := session.Values["userID"]
-        if !ok {
-            http.Error(w, "Unauthorized", http.StatusUnauthorized)
-            return
-        }
-
-        // Добавляем userID в контекст запроса
-        ctx := context.WithValue(r.Context(), "userID", userID)
-        next.ServeHTTP(w, r.WithContext(ctx))
-    })
-}
-
-func RefreshSession(w http.ResponseWriter, r *http.Request) {
-    session, err := store.Get(r, sessionName)
-    if err != nil {
-        http.Error(w, "Unauthorized", http.StatusUnauthorized)
-        return
-    }
-    _, ok := session.Values["userID"]
-    if !ok {
-        http.Error(w, "Unauthorized", http.StatusUnauthorized)
-        return
-    }
-    // Обновляем maxAge сессии
-    session.Options.MaxAge = 86400 * 7 // 7 дней
-    session.Save(r, w)
-    w.WriteHeader(http.StatusOK)
 }
 
 func GetUserID(r *http.Request) int {
-    userID, ok := r.Context().Value("userID").(int)
+    userID, ok := r.Context().Value(UserIDKey).(int)
     if !ok {
         return 0
     }
     return userID
-}
-
-func GetSessionStore() *sessions.CookieStore {
-    return store
 }

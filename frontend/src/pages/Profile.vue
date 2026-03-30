@@ -44,7 +44,6 @@ watch(user, async (newUser) => {
   }
 });
 
-// Редирект только после завершения проверки авторизации
 watch(
   [isAuthLoading, user],
   () => {

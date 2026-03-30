@@ -87,9 +87,7 @@ const fetchItems = async () => {
 };
 
 const handleAddToCart = async (product) => {
-  // product теперь содержит selectedSize, переданный из Card
   await addToCart(product.id, product.selectedSize, product.quantity || 1);
-  // Обновим статус isAdded в items
   const idx = items.value.findIndex((i) => i.id === product.id);
   if (idx !== -1) {
     items.value[idx].isAdded = true;

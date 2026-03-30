@@ -33,7 +33,6 @@ func GetOrders(db *sql.DB) http.HandlerFunc {
                 continue
             }
 
-            // Загружаем элементы заказа с image_url
             itemRows, err := db.Query(`
                 SELECT id, product_id, title, price, quantity, size, image_url, created_at
                 FROM order_items
@@ -64,7 +63,6 @@ func CreateOrder(db *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         userID := middleware.GetUserID(r)
 
-        // Получаем корзину пользователя с image_url
         rows, err := db.Query(`
             SELECT c.product_id, c.size, c.quantity, p.title, p.price, p.image_url
             FROM cart c
@@ -101,14 +99,12 @@ func CreateOrder(db *sql.DB) http.HandlerFunc {
             return
         }
 
-        // Получаем адрес пользователя
         var address string
         err = db.QueryRow(`SELECT address FROM users WHERE id = $1`, userID).Scan(&address)
         if err != nil {
             address = "Не указан"
         }
 
-        // Создаём заказ
         tx, err := db.Begin()
         if err != nil {
             http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -139,7 +135,6 @@ func CreateOrder(db *sql.DB) http.HandlerFunc {
             }
         }
 
-        // Очищаем корзину
         _, err = tx.Exec(`DELETE FROM cart WHERE user_id = $1`, userID)
         if err != nil {
             tx.Rollback()

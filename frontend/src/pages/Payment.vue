@@ -128,7 +128,6 @@ const vatPrice = ref(0);
 
 const totalAmount = computed(() => totalPrice.value + vatPrice.value);
 
-// Определение типа карты по префиксу (Visa, Mastercard, Мир)
 const cardType = computed(() => {
   const number = cardNumber.value.replace(/\s/g, '');
   if (!number) return null;
@@ -138,7 +137,6 @@ const cardType = computed(() => {
   return null;
 });
 
-// Загружаем корзину и сумму
 const loadCart = async () => {
   try {
     const cartData = await getCart();
@@ -150,7 +148,6 @@ const loadCart = async () => {
   }
 };
 
-// Форматирование номера карты (добавление пробелов)
 const formatCardNumber = () => {
   let value = cardNumber.value.replace(/\s/g, '');
   if (value.length > 16) value = value.slice(0, 16);
@@ -162,7 +159,6 @@ const formatCardNumber = () => {
   }
 };
 
-// Форматирование срока (MM/YY)
 const formatExpiry = () => {
   let value = cardExpiry.value.replace(/\D/g, '');
   if (value.length > 4) value = value.slice(0, 4);
@@ -173,19 +169,16 @@ const formatExpiry = () => {
   }
 };
 
-// Валидация формы
 const validate = () => {
   let valid = true;
   errors.value = { cardNumber: '', cardExpiry: '', cardCvv: '' };
 
-  // Номер карты: 16 цифр, допускаем любые (валидация типа карты необязательна)
   const cardNumDigits = cardNumber.value.replace(/\s/g, '');
   if (!/^\d{16}$/.test(cardNumDigits)) {
     errors.value.cardNumber = 'Введите 16 цифр номера карты';
     valid = false;
   }
 
-  // Срок
   const expiryMatch = cardExpiry.value.match(/^(\d{2})\/(\d{2})$/);
   if (!expiryMatch) {
     errors.value.cardExpiry = 'Используйте формат ММ/ГГ';
@@ -205,7 +198,6 @@ const validate = () => {
     }
   }
 
-  // CVV
   if (!/^\d{3}$/.test(cardCvv.value)) {
     errors.value.cardCvv = 'Введите 3 цифры CVV';
     valid = false;

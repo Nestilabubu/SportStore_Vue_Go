@@ -39,7 +39,7 @@ const handleSubmit = async () => {
   errors.value = {};
   try {
     await register(form.value);
-    await fetchUser(); // обновляем глобальное состояние
+    await fetchUser();
     successMessage.value = "Регистрация прошла успешно! Перенаправляем...";
     setTimeout(() => router.push("/profile"), 2000);
   } catch (error) {

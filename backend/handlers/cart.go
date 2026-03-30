@@ -15,7 +15,7 @@ import (
 type AddToCartRequest struct {
     ProductID int    `json:"productId"`
     Size      string `json:"size"`
-    Quantity  int    `json:"quantity"` // опционально, по умолчанию 1
+    Quantity  int    `json:"quantity"`
 }
 
 func GetCart(db *sql.DB) http.HandlerFunc {
@@ -65,7 +65,6 @@ func AddToCart(db *sql.DB) http.HandlerFunc {
             req.Quantity = 1
         }
 
-        // Проверяем, есть ли уже такой товар с таким размером
         var existingID int
         err := db.QueryRow(`
             SELECT id FROM cart
@@ -73,12 +72,10 @@ func AddToCart(db *sql.DB) http.HandlerFunc {
             userID, req.ProductID, req.Size).Scan(&existingID)
 
         if err == nil {
-            // Обновляем количество
             _, err = db.Exec(`
                 UPDATE cart SET quantity = quantity + $1
                 WHERE id = $2`, req.Quantity, existingID)
         } else {
-            // Вставляем новую запись
             _, err = db.Exec(`
                 INSERT INTO cart (user_id, product_id, size, quantity)
                 VALUES ($1, $2, $3, $4)`,
@@ -109,7 +106,6 @@ func UpdateCartItem(db *sql.DB) http.HandlerFunc {
         }
 
         if req.Quantity <= 0 {
-            // Удаляем, если количество 0
             db.Exec(`DELETE FROM cart WHERE id = $1 AND user_id = $2`, itemId, userID)
         } else {
             _, err := db.Exec(`

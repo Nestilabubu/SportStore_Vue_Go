@@ -24,14 +24,12 @@ func GetStatistics(db *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         userID := middleware.GetUserID(r)
 
-        // Статистика по заказам
         var stats Statistics
         stats.CategoryStats = make(map[string]struct {
             Count      int `json:"count"`
             TotalSpent int `json:"totalSpent"`
         })
 
-        // Общая информация
         err := db.QueryRow(`
             SELECT COUNT(*), COALESCE(SUM(total_price), 0)
             FROM orders
@@ -45,17 +43,14 @@ func GetStatistics(db *sql.DB) http.HandlerFunc {
             stats.AverageOrder = float64(stats.TotalSpent) / float64(stats.TotalOrders)
         }
 
-        // Количество купленных товаров
         err = db.QueryRow(`
             SELECT COALESCE(SUM(quantity), 0), COUNT(DISTINCT product_id)
             FROM order_items oi
             JOIN orders o ON oi.order_id = o.id
             WHERE o.user_id = $1`, userID).Scan(&stats.TotalItemsBought, &stats.TotalUniqueItems)
         if err != nil {
-            // игнорируем ошибку
         }
 
-        // Статистика по категориям
         rows, err := db.Query(`
             SELECT p.category, SUM(oi.quantity) as cnt, SUM(oi.price * oi.quantity) as spent
             FROM order_items oi
