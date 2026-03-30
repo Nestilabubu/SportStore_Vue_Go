@@ -87,7 +87,8 @@ const fetchItems = async () => {
 };
 
 const handleAddToCart = async (product) => {
-  await addToCart(product.id, product.selectedSize, 1);
+  // product теперь содержит selectedSize, переданный из Card
+  await addToCart(product.id, product.selectedSize, product.quantity || 1);
   // Обновим статус isAdded в items
   const idx = items.value.findIndex((i) => i.id === product.id);
   if (idx !== -1) {
@@ -97,14 +98,12 @@ const handleAddToCart = async (product) => {
 
 const handleToggleFavorite = async (product) => {
   await toggleFavorite(product);
-  // Обновим статус isFavorite в items
   const idx = items.value.findIndex((i) => i.id === product.id);
   if (idx !== -1) {
     items.value[idx].isFavorite = !items.value[idx].isFavorite;
   }
 };
 
-// Обновление статусов при изменении корзины/избранного
 watch(
   [cart, favorites],
   () => {

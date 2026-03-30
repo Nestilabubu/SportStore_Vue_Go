@@ -45,6 +45,7 @@ func main() {
     auth.HandleFunc("/orders", handlers.GetOrders(database)).Methods("GET")
     auth.HandleFunc("/orders", handlers.CreateOrder(database)).Methods("POST")
     auth.HandleFunc("/statistics", handlers.GetStatistics(database)).Methods("GET")
+    auth.HandleFunc("/refresh", handlers.Refresh(database)).Methods("POST")
 
     // CORS настройки
     c := cors.New(cors.Options{
