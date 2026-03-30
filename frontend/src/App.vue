@@ -32,11 +32,11 @@ const fetchUser = async () => {
   isAuthLoading.value = true;
   user.value = await getCurrentUser();
   if (user.value) {
-    startRefreshTimer(); // запускаем таймер
+    startRefreshTimer();
     cart.value = await getCart();
     favorites.value = await getFavorites();
   } else {
-    stopRefreshTimer(); // останавливаем таймер
+    stopRefreshTimer();
     cart.value = [];
     favorites.value = [];
   }
@@ -61,7 +61,6 @@ const loadInitialData = async () => {
 
 onMounted(loadInitialData);
 
-// Методы для работы с корзиной (вызывают API и обновляют локальное состояние)
 const addToCart = async (productId, size, quantity = 1) => {
   if (!user.value) {
     alert("Пожалуйста, войдите в систему");
@@ -69,7 +68,7 @@ const addToCart = async (productId, size, quantity = 1) => {
     return;
   }
   await apiAddToCart(productId, size, quantity);
-  cart.value = await getCart(); // перезагружаем корзину
+  cart.value = await getCart();
 };
 
 const startRefreshTimer = () => {
@@ -105,7 +104,6 @@ const updateCartQuantity = async (itemId, quantity) => {
   }
 };
 
-// Методы для избранного
 const toggleFavorite = async (product) => {
   if (!user.value) {
     alert("Пожалуйста, войдите в систему");
@@ -118,7 +116,7 @@ const toggleFavorite = async (product) => {
   } else {
     await apiAddToFavorites(product.id);
   }
-  favorites.value = await getFavorites(); // обновляем список
+  favorites.value = await getFavorites();
 };
 
 const logout = async () => {
@@ -166,7 +164,7 @@ provide("cart", {
     }
     await refreshCart();
   },
-  refreshCart, // уже есть
+  refreshCart,
 });
 provide("favorites", {
   favorites,

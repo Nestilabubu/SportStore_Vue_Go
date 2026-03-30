@@ -13,10 +13,9 @@ import (
 
 func GetProducts(db *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
-        // Парсинг query параметров
         sortBy := r.URL.Query().Get("sortBy")
         category := r.URL.Query().Get("category")
-        search := r.URL.Query().Get("search") // title LIKE
+        search := r.URL.Query().Get("search")
         minPrice := r.URL.Query().Get("minPrice")
         maxPrice := r.URL.Query().Get("maxPrice")
         size := r.URL.Query().Get("size")
@@ -57,7 +56,6 @@ func GetProducts(db *sql.DB) http.HandlerFunc {
             argId++
         }
 
-        // Сортировка
         switch sortBy {
         case "price":
             query += " ORDER BY price ASC"

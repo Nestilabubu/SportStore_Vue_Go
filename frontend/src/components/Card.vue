@@ -6,7 +6,7 @@ const props = defineProps({
   imgUrl: String,
   title: String,
   price: Number,
-  isFavorite: Boolean, // больше не используем, оставлен для совместимости
+  isFavorite: Boolean,
   isAdded: Boolean,
   onClickAdd: Function,
   onClickFav: Function,
@@ -18,16 +18,14 @@ const props = defineProps({
 const emit = defineEmits(["addToFavorite", "addToCart"]);
 
 const cart = inject("cart");
-const favorites = inject("favorites"); // получаем реактивный ref из App.vue
+const favorites = inject("favorites");
 
-// Вычисляем, находится ли товар в избранном
 const isFavoriteLocal = computed(() => {
   return favorites?.favorites?.value?.some((f) => f.id === props.id) ?? false;
 });
 
 const selectedSize = ref(props.availableSizes?.[0] || "");
 
-// Вычисляем элемент корзины для данного товара и выбранного размера
 const cartItem = computed(() => {
   if (!cart?.cart?.value) return null;
   return cart.cart.value.find(
@@ -38,7 +36,6 @@ const cartItem = computed(() => {
 const cartQuantity = computed(() => cartItem.value?.quantity || 0);
 const isInCart = computed(() => cartQuantity.value > 0);
 
-// Сохраняем выбранный размер в localStorage
 watch(selectedSize, (newSize) => {
   if (props.id) {
     const savedSizes = JSON.parse(
@@ -73,13 +70,10 @@ const categoryColor = computed(() => {
 
 const handleFavoriteClick = () => {
   if (props.onClickFav) {
-    // Вызываем родительский обработчик, который обновит глобальное состояние
     props.onClickFav();
-    // Ничего больше не делаем, computed сам обновится при изменении favorites
   }
 };
 
-// Добавление в корзину
 const addToCartHandler = () => {
   if (props.onClickAdd) {
     const itemData = {
@@ -126,7 +120,6 @@ const handleRemove = () => {
   }
 };
 
-// Не нужны onMounted и обработчики storage, так как используем глобальное состояние
 </script>
 
 <template>

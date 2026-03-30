@@ -37,7 +37,6 @@ type CartItem struct {
     Size      string    `json:"size"`
     Quantity  int       `json:"quantity"`
     CreatedAt time.Time `json:"createdAt"`
-    // Для ответа с данными товара
     Title     string `json:"title"`
     Price     int    `json:"price"`
     ImageURL  string `json:"imageUrl"`
@@ -62,5 +61,13 @@ type OrderItem struct {
     Quantity  int       `json:"quantity"`
     Size      *string   `json:"size,omitempty"`
     ImageUrl  string    `json:"imageUrl"`  
+    CreatedAt time.Time `json:"createdAt"`
+}
+
+type Session struct {
+    ID        int       `json:"id"`
+    Token     string    `json:"token"`
+    UserID    int       `json:"userId"`
+    ExpiresAt time.Time `json:"expiresAt"`
     CreatedAt time.Time `json:"createdAt"`
 }

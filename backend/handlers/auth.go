@@ -4,8 +4,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
-	"sportshop-backend/middleware"
+	"sportshop-backend/db"
 	"sportshop-backend/models"
+	"sportshop-backend/utils"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -23,13 +25,7 @@ type LoginRequest struct {
     Password string `json:"password"`
 }
 
-func Refresh(db *sql.DB) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        middleware.RefreshSession(w, r)
-    }
-}
-
-func Register(db *sql.DB) http.HandlerFunc {
+func Register(dbConn *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         var req RegisterRequest
         if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -37,7 +33,6 @@ func Register(db *sql.DB) http.HandlerFunc {
             return
         }
 
-        // Хеширование пароля
         hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
         if err != nil {
             http.Error(w, "Server error", http.StatusInternalServerError)
@@ -45,7 +40,7 @@ func Register(db *sql.DB) http.HandlerFunc {
         }
 
         var userID int
-        err = db.QueryRow(`
+        err = dbConn.QueryRow(`
             INSERT INTO users (full_name, email, password_hash, phone, address)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING id`,
@@ -57,17 +52,33 @@ func Register(db *sql.DB) http.HandlerFunc {
             return
         }
 
-        // Устанавливаем сессию
-		session, _ := middleware.GetSessionStore().Get(r, "sportshop-session")	
-        session.Values["userID"] = userID
-        session.Save(r, w)
+        token, err := utils.GenerateSessionToken()
+        if err != nil {
+            http.Error(w, "Server error", http.StatusInternalServerError)
+            return
+        }
+
+        expiresAt := time.Now().Add(15 * time.Minute)
+        if err := db.CreateSession(dbConn, token, userID, expiresAt); err != nil {
+            http.Error(w, "Server error", http.StatusInternalServerError)
+            return
+        }
+
+        http.SetCookie(w, &http.Cookie{
+            Name:     "session_token",
+            Value:    token,
+            Path:     "/",
+            HttpOnly: true,
+            SameSite: http.SameSiteLaxMode,
+            MaxAge:   86400,
+        })
 
         w.WriteHeader(http.StatusCreated)
         json.NewEncoder(w).Encode(map[string]int{"id": userID})
     }
 }
 
-func Login(db *sql.DB) http.HandlerFunc {
+func Login(dbConn *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         var req LoginRequest
         if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -76,7 +87,7 @@ func Login(db *sql.DB) http.HandlerFunc {
         }
 
         var user models.User
-        err := db.QueryRow(`
+        err := dbConn.QueryRow(`
             SELECT id, full_name, email, password_hash, phone, address, created_at
             FROM users WHERE email = $1`, req.Email,
         ).Scan(&user.ID, &user.FullName, &user.Email, &user.PasswordHash, &user.Phone, &user.Address, &user.CreatedAt)
@@ -91,18 +102,44 @@ func Login(db *sql.DB) http.HandlerFunc {
             return
         }
 
-        session, _ := middleware.GetSessionStore().Get(r, "sportshop-session")
-        session.Values["userID"] = user.ID
-        session.Save(r, w)
+        token, err := utils.GenerateSessionToken()
+        if err != nil {
+            http.Error(w, "Server error", http.StatusInternalServerError)
+            return
+        }
+
+        expiresAt := time.Now().Add(15 * time.Minute)
+        if err := db.CreateSession(dbConn, token, user.ID, expiresAt); err != nil {
+            http.Error(w, "Server error", http.StatusInternalServerError)
+            return
+        }
+
+        http.SetCookie(w, &http.Cookie{
+            Name:     "session_token",
+            Value:    token,
+            Path:     "/",
+            HttpOnly: true,
+            SameSite: http.SameSiteLaxMode,
+            MaxAge:   86400,
+        })
 
         json.NewEncoder(w).Encode(user)
     }
 }
 
-func Logout(w http.ResponseWriter, r *http.Request) {
-    session, _ := middleware.GetSessionStore().Get(r, "sportshop-session")
-    session.Values["userID"] = nil
-    session.Options.MaxAge = -1 // удалить
-    session.Save(r, w)
-    w.WriteHeader(http.StatusOK)
+func Logout(dbConn *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        cookie, err := r.Cookie("session_token")
+        if err == nil {
+            db.DeleteSessionByToken(dbConn, cookie.Value)
+        }
+        http.SetCookie(w, &http.Cookie{
+            Name:     "session_token",
+            Value:    "",
+            Path:     "/",
+            HttpOnly: true,
+            MaxAge:   -1,
+        })
+        w.WriteHeader(http.StatusOK)
+    }
 }

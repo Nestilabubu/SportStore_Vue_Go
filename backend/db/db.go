@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -47,4 +48,28 @@ func InitDB() *sql.DB {
 
     log.Println("Successfully connected to database")
     return db
+}
+
+func CreateSession(db *sql.DB, token string, userID int, expiresAt time.Time) error {
+    _, err := db.Exec("INSERT INTO sessions (token, user_id, expires_at) VALUES ($1, $2, $3)", token, userID, expiresAt)
+    return err
+}
+
+func GetSessionByToken(db *sql.DB, token string) (sessionID int, userID int, expiresAt time.Time, err error) {
+    err = db.QueryRow("SELECT id, user_id, expires_at FROM sessions WHERE token = $1 AND expires_at > $2", token, time.Now()).
+        Scan(&sessionID, &userID, &expiresAt)
+    if err != nil {
+        return 0, 0, time.Time{}, err
+    }
+    return
+}
+
+func UpdateSessionExpiry(db *sql.DB, token string, newExpiry time.Time) error {
+    _, err := db.Exec("UPDATE sessions SET expires_at = $1 WHERE token = $2", newExpiry, token)
+    return err
+}
+
+func DeleteSessionByToken(db *sql.DB, token string) error {
+    _, err := db.Exec("DELETE FROM sessions WHERE token = $1", token)
+    return err
 }

@@ -25,7 +25,7 @@ const handleSubmit = async () => {
   errors.value = {};
   try {
     await login(form.value);
-    await fetchUser(); // обновляем состояние
+    await fetchUser();
     router.push("/profile");
   } catch (error) {
     if (error.response?.status === 401) {
