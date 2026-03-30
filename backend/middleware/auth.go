@@ -41,6 +41,23 @@ func AuthRequired(next http.Handler) http.Handler {
     })
 }
 
+func RefreshSession(w http.ResponseWriter, r *http.Request) {
+    session, err := store.Get(r, sessionName)
+    if err != nil {
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return
+    }
+    _, ok := session.Values["userID"]
+    if !ok {
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return
+    }
+    // Обновляем maxAge сессии
+    session.Options.MaxAge = 86400 * 7 // 7 дней
+    session.Save(r, w)
+    w.WriteHeader(http.StatusOK)
+}
+
 func GetUserID(r *http.Request) int {
     userID, ok := r.Context().Value("userID").(int)
     if !ok {

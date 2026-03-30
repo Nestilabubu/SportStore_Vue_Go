@@ -3,10 +3,18 @@ import { inject, ref } from "vue";
 import { useRouter } from "vue-router";
 import { createOrder } from "../utils/orders";
 
-const { cart, totalPrice, vatPrice, closeDrawer, refreshCart } = inject("cart");
+const {
+  cart,
+  totalPrice,
+  vatPrice,
+  closeDrawer,
+  refreshCart,
+  removeFromCart,
+  updateCartQuantity,
+} = inject("cart");
 const { user } = inject("auth");
 const router = useRouter();
-const isCreatingOrder = ref(false);
+const isProcessing = ref(false);
 
 const increaseQuantity = (item) => {
   updateCartQuantity(item.id, (item.quantity || 1) + 1);
@@ -28,7 +36,7 @@ const handleCreateOrder = async () => {
     router.push("/login");
     return;
   }
-  isCreatingOrder.value = true;
+  isProcessing.value = true;
   try {
     await createOrder();
     await refreshCart();
@@ -38,7 +46,7 @@ const handleCreateOrder = async () => {
     console.error("Ошибка при оформлении заказа:", error);
     alert("Произошла ошибка. Попробуйте снова.");
   } finally {
-    isCreatingOrder.value = false;
+    isProcessing.value = false;
   }
 };
 
@@ -51,6 +59,7 @@ const goToPayment = () => {
   }
   router.push("/payment");
 };
+
 const totalItems = () =>
   cart.value.reduce((acc, item) => acc + item.quantity, 0);
 </script>
@@ -175,7 +184,9 @@ const totalItems = () =>
 
                 <div class="flex items-center gap-4">
                   <span class="font-bold text-right min-w-[100px]">
-                    {{ (item.price * item.quantity).toLocaleString("ru-RU") }}
+                    {{
+                      (item.price * item.quantity).toLocaleString("ru-RU")
+                    }}
                     руб.
                   </span>
                   <button
@@ -249,17 +260,14 @@ const totalItems = () =>
 .overflow-y-auto::-webkit-scrollbar {
   width: 6px;
 }
-
 .overflow-y-auto::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 3px;
 }
-
 .overflow-y-auto::-webkit-scrollbar-thumb {
   background: #888;
   border-radius: 3px;
 }
-
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
   background: #555;
 }

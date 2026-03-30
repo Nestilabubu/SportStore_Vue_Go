@@ -30,3 +30,12 @@ export async function updateProfile(data) {
   const response = await api.put("/profile", data);
   return response.data;
 }
+export async function refreshSession() {
+  try {
+    await api.post("/refresh");
+    return true;
+  } catch (error) {
+    console.error("Ошибка обновления сессии", error);
+    return false;
+  }
+}

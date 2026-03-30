@@ -23,6 +23,12 @@ type LoginRequest struct {
     Password string `json:"password"`
 }
 
+func Refresh(db *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        middleware.RefreshSession(w, r)
+    }
+}
+
 func Register(db *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         var req RegisterRequest

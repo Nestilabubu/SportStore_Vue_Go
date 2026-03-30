@@ -1,9 +1,13 @@
 <script setup>
-import { ref, provide, onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, provide, computed } from "vue";
 import { useRouter } from "vue-router";
 import Header from "./components/Header.vue";
 import Drawer from "./components/CartDrawer.vue";
-import { getCurrentUser, logout as logoutApi } from "./utils/auth";
+import {
+  getCurrentUser,
+  logout as logoutApi,
+  refreshSession,
+} from "./utils/auth";
 import {
   getCart,
   addToCart as apiAddToCart,
@@ -22,20 +26,30 @@ const favorites = ref([]);
 const user = ref(null);
 const drawerOpen = ref(false);
 const isAuthLoading = ref(true);
+let refreshInterval = null;
 
 const fetchUser = async () => {
   isAuthLoading.value = true;
   user.value = await getCurrentUser();
   if (user.value) {
+    startRefreshTimer(); // запускаем таймер
     cart.value = await getCart();
     favorites.value = await getFavorites();
   } else {
+    stopRefreshTimer(); // останавливаем таймер
     cart.value = [];
     favorites.value = [];
   }
   isAuthLoading.value = false;
 };
-onMounted(fetchUser);
+
+onMounted(() => {
+  fetchUser();
+});
+
+onUnmounted(() => {
+  stopRefreshTimer();
+});
 
 const loadInitialData = async () => {
   user.value = await getCurrentUser();
@@ -56,6 +70,25 @@ const addToCart = async (productId, size, quantity = 1) => {
   }
   await apiAddToCart(productId, size, quantity);
   cart.value = await getCart(); // перезагружаем корзину
+};
+
+const startRefreshTimer = () => {
+  if (refreshInterval) clearInterval(refreshInterval);
+  refreshInterval = setInterval(
+    async () => {
+      if (user.value) {
+        await refreshSession();
+      }
+    },
+    15 * 60 * 1000,
+  );
+};
+
+const stopRefreshTimer = () => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval);
+    refreshInterval = null;
+  }
 };
 
 const removeFromCart = async (itemId) => {
@@ -91,6 +124,7 @@ const toggleFavorite = async (product) => {
 const logout = async () => {
   await logoutApi();
   user.value = null;
+  stopRefreshTimer();
   cart.value = [];
   favorites.value = [];
   router.push("/");

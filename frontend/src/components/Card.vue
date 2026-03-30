@@ -6,7 +6,7 @@ const props = defineProps({
   imgUrl: String,
   title: String,
   price: Number,
-  isFavorite: Boolean,
+  isFavorite: Boolean, // больше не используем, оставлен для совместимости
   isAdded: Boolean,
   onClickAdd: Function,
   onClickFav: Function,
@@ -16,38 +16,29 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["addToFavorite", "addToCart"]);
+
 const cart = inject("cart");
+const favorites = inject("favorites"); // получаем реактивный ref из App.vue
+
+// Вычисляем, находится ли товар в избранном
+const isFavoriteLocal = computed(() => {
+  return favorites?.favorites?.value?.some((f) => f.id === props.id) ?? false;
+});
+
 const selectedSize = ref(props.availableSizes?.[0] || "");
-const localIsFavorite = ref(props.isFavorite);
-const localIsAdded = ref(props.isAdded);
 
-watch(
-  () => props.isFavorite,
-  (newValue) => {
-    localIsFavorite.value = newValue;
-  },
-  { immediate: true },
-);
+// Вычисляем элемент корзины для данного товара и выбранного размера
+const cartItem = computed(() => {
+  if (!cart?.cart?.value) return null;
+  return cart.cart.value.find(
+    (item) => item.productId === props.id && item.size === selectedSize.value,
+  );
+});
 
-watch(
-  () => props.isAdded,
-  (newValue) => {
-    localIsAdded.value = newValue;
-  },
-  { immediate: true },
-);
+const cartQuantity = computed(() => cartItem.value?.quantity || 0);
+const isInCart = computed(() => cartQuantity.value > 0);
 
-const checkFavoriteFromStorage = () => {
-  const user = JSON.parse(localStorage.getItem("current_user") || "null");
-  if (!user || !props.id) {
-    localIsFavorite.value = false;
-    return;
-  }
-  const favoritesKey = `favorites_${user.id}`;
-  const savedFavorites = JSON.parse(localStorage.getItem(favoritesKey) || "[]");
-  localIsFavorite.value = savedFavorites.some((fav) => fav.id === props.id);
-};
-
+// Сохраняем выбранный размер в localStorage
 watch(selectedSize, (newSize) => {
   if (props.id) {
     const savedSizes = JSON.parse(
@@ -62,7 +53,7 @@ const savedSizes = JSON.parse(localStorage.getItem("selectedSizes") || "{}");
 if (
   props.id &&
   savedSizes[props.id] &&
-  props.availableSizes.includes(savedSizes[props.id])
+  props.availableSizes?.includes(savedSizes[props.id])
 ) {
   selectedSize.value = savedSizes[props.id];
 }
@@ -82,13 +73,14 @@ const categoryColor = computed(() => {
 
 const handleFavoriteClick = () => {
   if (props.onClickFav) {
-    localIsFavorite.value = !localIsFavorite.value;
+    // Вызываем родительский обработчик, который обновит глобальное состояние
     props.onClickFav();
-    setTimeout(checkFavoriteFromStorage, 100);
+    // Ничего больше не делаем, computed сам обновится при изменении favorites
   }
 };
 
-const handleAddToCart = () => {
+// Добавление в корзину
+const addToCartHandler = () => {
   if (props.onClickAdd) {
     const itemData = {
       id: props.id,
@@ -97,9 +89,28 @@ const handleAddToCart = () => {
       imageUrl: props.imgUrl,
       category: props.category,
       selectedSize: selectedSize.value,
-      isAdded: !localIsAdded.value,
+      quantity: 1,
     };
     props.onClickAdd(itemData);
+  }
+};
+
+const incrementQuantity = async () => {
+  if (cartItem.value) {
+    await cart.updateCartQuantity?.(cartItem.value.id, cartQuantity.value + 1);
+  } else {
+    addToCartHandler();
+  }
+};
+
+const decrementQuantity = async () => {
+  if (cartItem.value) {
+    const newQuantity = cartQuantity.value - 1;
+    if (newQuantity <= 0) {
+      await cart.removeFromCart?.(cartItem.value.id);
+    } else {
+      await cart.updateCartQuantity?.(cartItem.value.id, newQuantity);
+    }
   }
 };
 
@@ -115,15 +126,7 @@ const handleRemove = () => {
   }
 };
 
-onMounted(() => {
-  checkFavoriteFromStorage();
-  const handleStorageChange = (event) => {
-    if (event.key && event.key.startsWith("favorites_")) {
-      checkFavoriteFromStorage();
-    }
-  };
-  window.addEventListener("storage", handleStorageChange);
-});
+// Не нужны onMounted и обработчики storage, так как используем глобальное состояние
 </script>
 
 <template>
@@ -141,7 +144,7 @@ onMounted(() => {
     <img
       v-if="onClickFav"
       @click="handleFavoriteClick"
-      :src="localIsFavorite ? '/like-2.svg' : '/like-1.svg'"
+      :src="isFavoriteLocal ? '/like-2.svg' : '/like-1.svg'"
       alt="Добавить в избранное"
       class="absolute top-8 right-8 z-10 w-6 h-6 cursor-pointer hover:scale-110 transition"
     />
@@ -184,19 +187,63 @@ onMounted(() => {
         <span class="text-slate-400 text-sm">Цена:</span>
         <b class="text-xl text-gray-800">{{ price }} руб.</b>
       </div>
-      <div class="flex gap-2">
+      <div class="flex gap-2 items-center">
+        <!-- Если товар уже в корзине, показываем контролы количества -->
+        <template v-if="isInCart">
+          <button
+            @click.stop="decrementQuantity"
+            class="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 transition"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-5 h-5 text-gray-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M20 12H4"
+              />
+            </svg>
+          </button>
+          <span class="w-8 text-center font-medium">{{ cartQuantity }}</span>
+          <button
+            @click.stop="incrementQuantity"
+            class="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-100 transition"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-5 h-5 text-gray-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+          </button>
+        </template>
+        <!-- Иначе – кнопка добавления -->
         <img
-          v-if="onClickAdd"
-          @click="handleAddToCart"
-          :src="localIsAdded ? '/checked.svg' : '/plus.svg'"
+          v-else-if="onClickAdd"
+          @click.stop="addToCartHandler"
+          src="/plus.svg"
           alt="Добавить в корзину"
           class="w-8 h-8 cursor-pointer hover:scale-110 transition"
         />
+        <!-- Кнопка удаления из избранного -->
         <svg
           v-if="onRemove"
           @click="handleRemove"
           xmlns="http://www.w3.org/2000/svg"
-          class="w-7 h-7 cursor-pointer hover:scale-110 transition text-red-500 border-2 rounded-xl"
+          class="w-7 h-7 cursor-pointer hover:scale-110 transition text-red-500"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
