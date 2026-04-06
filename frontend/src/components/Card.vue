@@ -119,7 +119,6 @@ const handleRemove = () => {
     });
   }
 };
-
 </script>
 
 <template>
@@ -143,12 +142,13 @@ const handleRemove = () => {
     />
 
     <div
-      class="rounded-2xl overflow-hidden mb-4 h-64 flex items-center justify-center bg-gray-100"
+      class="rounded-2xl overflow-hidden mb-4 h-64 flex items-center justify-center bg-white"
     >
       <img
         :src="imgUrl"
         :alt="title"
-        class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+        class="w-full h-full object-contain transition-transform duration-300 hover:scale-105"
+        style="background-color: white"
       />
     </div>
 
@@ -181,7 +181,6 @@ const handleRemove = () => {
         <b class="text-xl text-gray-800">{{ price }} руб.</b>
       </div>
       <div class="flex gap-2 items-center">
-        <!-- Если товар уже в корзине, показываем контролы количества -->
         <template v-if="isInCart">
           <button
             @click.stop="decrementQuantity"
