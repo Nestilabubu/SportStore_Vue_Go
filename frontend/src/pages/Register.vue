@@ -1,9 +1,11 @@
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { register } from "../utils/auth";
 import { inject } from "vue";
+
 const router = useRouter();
+const { fetchUser } = inject("auth");
 
 const form = ref({
   fullName: "",
@@ -14,10 +16,43 @@ const form = ref({
   address: "",
 });
 
-const { fetchUser } = inject("auth");
 const errors = ref({});
 const isLoading = ref(false);
 const successMessage = ref("");
+
+// Состояние для проверки пароля в реальном времени
+const passwordStrength = computed(() => {
+  const pwd = form.value.password;
+  const checks = {
+    length: pwd.length >= 8,
+    uppercase: /[A-Z]/.test(pwd),
+    digit: /\d/.test(pwd),
+    special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pwd),
+  };
+  const passed = Object.values(checks).filter(Boolean).length;
+  return { checks, passed, total: 4 };
+});
+
+const isPasswordValid = computed(() => passwordStrength.value.passed === 4);
+const isConfirmPasswordValid = computed(
+  () =>
+    form.value.confirmPassword &&
+    form.value.password === form.value.confirmPassword,
+);
+
+const passwordStrengthText = computed(() => {
+  const pct = (passwordStrength.value.passed / 4) * 100;
+  if (pct === 100) return "Отличный пароль";
+  if (pct >= 50) return "Средний пароль";
+  return "Слабый пароль";
+});
+
+const passwordStrengthColor = computed(() => {
+  const pct = (passwordStrength.value.passed / 4) * 100;
+  if (pct === 100) return "bg-green-500";
+  if (pct >= 50) return "bg-yellow-500";
+  return "bg-red-500";
+});
 
 const validateForm = () => {
   errors.value = {};
@@ -25,11 +60,16 @@ const validateForm = () => {
   if (!form.value.email.trim()) errors.value.email = "Введите email";
   else if (!/^\S+@\S+\.\S+$/.test(form.value.email))
     errors.value.email = "Введите корректный email";
+
   if (!form.value.password) errors.value.password = "Введите пароль";
-  else if (form.value.password.length < 6)
-    errors.value.password = "Пароль должен быть не менее 6 символов";
+  else if (!isPasswordValid.value) {
+    errors.value.password =
+      "Пароль должен содержать минимум 8 символов, заглавную букву, цифру и спецсимвол";
+  }
+
   if (form.value.password !== form.value.confirmPassword)
     errors.value.confirmPassword = "Пароли не совпадают";
+
   return Object.keys(errors.value).length === 0;
 };
 
@@ -111,6 +151,7 @@ const handleSubmit = async () => {
             </p>
           </div>
 
+          <!-- Поле пароля с индикатором силы -->
           <div>
             <label
               for="password"
@@ -123,13 +164,66 @@ const handleSubmit = async () => {
               type="password"
               class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
               :class="errors.password ? 'border-red-500' : 'border-gray-300'"
-              placeholder="Не менее 6 символов"
+              placeholder="Не менее 8 символов"
             />
+
+            <!-- Индикатор силы пароля -->
+            <div v-if="form.password" class="mt-2">
+              <div class="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  class="h-2 rounded-full transition-all duration-300"
+                  :class="passwordStrengthColor"
+                  :style="{ width: (passwordStrength.passed / 4) * 100 + '%' }"
+                ></div>
+              </div>
+              <p class="text-xs mt-1 text-gray-600">
+                {{ passwordStrengthText }}
+              </p>
+              <ul class="text-xs mt-2 space-y-1">
+                <li
+                  :class="
+                    passwordStrength.checks.length
+                      ? 'text-green-600'
+                      : 'text-gray-500'
+                  "
+                >
+                  ✓ Минимум 8 символов
+                </li>
+                <li
+                  :class="
+                    passwordStrength.checks.uppercase
+                      ? 'text-green-600'
+                      : 'text-gray-500'
+                  "
+                >
+                  ✓ Хотя бы одна заглавная буква
+                </li>
+                <li
+                  :class="
+                    passwordStrength.checks.digit
+                      ? 'text-green-600'
+                      : 'text-gray-500'
+                  "
+                >
+                  ✓ Хотя бы одна цифра
+                </li>
+                <li
+                  :class="
+                    passwordStrength.checks.special
+                      ? 'text-green-600'
+                      : 'text-gray-500'
+                  "
+                >
+                  ✓ Хотя бы один спецсимвол (!@#$%^&* и т.д.)
+                </li>
+              </ul>
+            </div>
             <p v-if="errors.password" class="mt-1 text-sm text-red-600">
               {{ errors.password }}
             </p>
           </div>
 
+          <!-- Подтверждение пароля -->
           <div>
             <label
               for="confirmPassword"
@@ -142,10 +236,19 @@ const handleSubmit = async () => {
               type="password"
               class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
               :class="
-                errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                errors.confirmPassword ||
+                (form.confirmPassword && !isConfirmPasswordValid)
+                  ? 'border-red-500'
+                  : 'border-gray-300'
               "
               placeholder="Повторите пароль"
             />
+            <p
+              v-if="form.confirmPassword && !isConfirmPasswordValid"
+              class="mt-1 text-sm text-red-600"
+            >
+              Пароли не совпадают
+            </p>
             <p v-if="errors.confirmPassword" class="mt-1 text-sm text-red-600">
               {{ errors.confirmPassword }}
             </p>
@@ -190,8 +293,8 @@ const handleSubmit = async () => {
 
           <button
             type="submit"
-            :disabled="isLoading"
-            class="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+            :disabled="isLoading || !isPasswordValid || !isConfirmPasswordValid"
+            class="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span v-if="isLoading">Регистрация...</span>
             <span v-else>Зарегистрироваться</span>
