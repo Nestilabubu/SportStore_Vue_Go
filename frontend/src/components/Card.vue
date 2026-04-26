@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, inject } from "vue";
+import { useRouter } from "vue-router";
 
 const props = defineProps({
   id: Number,
@@ -19,6 +20,9 @@ const emit = defineEmits(["addToFavorite", "addToCart"]);
 
 const cart = inject("cart");
 const favorites = inject("favorites");
+
+const router = useRouter();
+const { user } = inject("auth");
 
 const isFavoriteLocal = computed(() => {
   return favorites?.favorites?.value?.some((f) => f.id === props.id) ?? false;
@@ -75,6 +79,10 @@ const handleFavoriteClick = () => {
 };
 
 const addToCartHandler = () => {
+  if (!user.value) {
+    router.push("/login");
+    return;
+  }
   if (props.onClickAdd) {
     const itemData = {
       id: props.id,
@@ -88,8 +96,11 @@ const addToCartHandler = () => {
     props.onClickAdd(itemData);
   }
 };
-
 const incrementQuantity = async () => {
+  if (!user.value) {
+    router.push("/login");
+    return;
+  }
   if (cartItem.value) {
     await cart.updateCartQuantity?.(cartItem.value.id, cartQuantity.value + 1);
   } else {

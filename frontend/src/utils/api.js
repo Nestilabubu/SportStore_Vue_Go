@@ -22,8 +22,12 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      console.log("Unauthorized, please login");
+    if (
+      error.response?.status === 401 &&
+      !window.location.pathname.includes("/login")
+    ) {
+      // Перенаправляем на страницу входа, но только если не уже там
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   },

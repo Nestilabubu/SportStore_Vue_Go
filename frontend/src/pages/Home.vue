@@ -4,12 +4,16 @@ import CardList from "../components/CardList.vue";
 import { getProducts } from "../utils/products";
 import { inject } from "vue";
 import { debounce } from "lodash";
+import { useRouter } from "vue-router";
 
 const { addToCart, cart } = inject("cart");
 const { favorites, toggleFavorite } = inject("favorites");
 
 const items = ref([]);
 const isLoading = ref(false);
+
+const router = useRouter();
+const { user } = inject("auth");
 
 const filters = reactive({
   sortBy: "title",
@@ -87,7 +91,12 @@ const fetchItems = async () => {
 };
 
 const handleAddToCart = async (product) => {
+  if (!user.value) {
+    router.push("/login");
+    return;
+  }
   await addToCart(product.id, product.selectedSize, product.quantity || 1);
+  // обновление статуса
   const idx = items.value.findIndex((i) => i.id === product.id);
   if (idx !== -1) {
     items.value[idx].isAdded = true;
