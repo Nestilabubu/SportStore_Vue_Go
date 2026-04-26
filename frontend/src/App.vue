@@ -24,8 +24,10 @@ const drawerOpen = ref(false);
 const isAuthLoading = ref(true);
 
 const fetchUser = async () => {
+  console.log("fetchUser called");
   isAuthLoading.value = true;
   user.value = await getCurrentUser();
+  console.log("fetchUser got user", user.value);
   if (user.value) {
     cart.value = await getCart();
     favorites.value = await getFavorites();

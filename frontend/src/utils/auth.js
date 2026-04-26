@@ -22,17 +22,20 @@ function hasSessionCookie() {
 }
 
 export async function getCurrentUser() {
-  // Если нет cookie сессии – не делаем запрос, сразу возвращаем null
-  if (!hasSessionCookie()) {
-    return null;
-  }
+  console.log("getCurrentUser: checking cookie", document.cookie);
+  // if (!hasSessionCookie()) {
+  //   console.log("getCurrentUser: no session cookie");
+  //   return null;
+  // }
   try {
     const response = await api.get("/profile", {
       validateStatus: (status) => status < 500,
     });
+    console.log("getCurrentUser: response status", response.status);
     if (response.status === 401) return null;
     return response.data;
-  } catch {
+  } catch (error) {
+    console.error("getCurrentUser error", error);
     return null;
   }
 }
