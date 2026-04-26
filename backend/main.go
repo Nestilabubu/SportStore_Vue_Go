@@ -1,16 +1,16 @@
 package main
 
 import (
-	"log"
-	"net/http"
-	"os"
+    "log"
+    "net/http"
+    "os"
 
-	"sportshop-backend/db"
-	"sportshop-backend/handlers"
-	"sportshop-backend/middleware"
+    "sportshop-backend/db"
+    "sportshop-backend/handlers"
+    "sportshop-backend/middleware"
 
-	"github.com/gorilla/mux"
-	"github.com/rs/cors"
+    "github.com/gorilla/mux"
+    "github.com/rs/cors"
 )
 
 func main() {
@@ -19,12 +19,14 @@ func main() {
 
     r := mux.NewRouter()
 
+    // Публичные маршруты
     r.HandleFunc("/api/register", handlers.Register(database)).Methods("POST")
     r.HandleFunc("/api/login", handlers.Login(database)).Methods("POST")
     r.HandleFunc("/api/logout", handlers.Logout(database)).Methods("POST")
     r.HandleFunc("/api/products", handlers.GetProducts(database)).Methods("GET")
     r.HandleFunc("/api/products/{id}", handlers.GetProduct(database)).Methods("GET")
 
+    // Защищённые маршруты
     auth := r.PathPrefix("/api").Subrouter()
     auth.Use(middleware.AuthRequired(database))
     auth.HandleFunc("/profile", handlers.GetProfile(database)).Methods("GET")
@@ -40,8 +42,14 @@ func main() {
     auth.HandleFunc("/orders", handlers.CreateOrder(database)).Methods("POST")
     auth.HandleFunc("/statistics", handlers.GetStatistics(database)).Methods("GET")
 
+    // Настройка CORS для продакшена
+    allowedOrigins := []string{
+        "https://ваш-проект.vercel.app", // Замените на ваш URL на Vercel
+        "http://localhost:5173", // Для разработки
+    }
+    
     c := cors.New(cors.Options{
-        AllowedOrigins:   []string{"http://localhost:5173"},
+        AllowedOrigins:   allowedOrigins,
         AllowCredentials: true,
         AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
         AllowedHeaders:   []string{"Content-Type", "Authorization"},
@@ -53,6 +61,7 @@ func main() {
     if port == "" {
         port = "8080"
     }
+    
     log.Printf("Server started on port %s", port)
     log.Fatal(http.ListenAndServe(":"+port, handler))
 }
