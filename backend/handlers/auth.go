@@ -69,7 +69,8 @@ func Register(dbConn *sql.DB) http.HandlerFunc {
             Value:    token,
             Path:     "/",
             HttpOnly: true,
-            SameSite: http.SameSiteLaxMode,
+            Secure:   true,
+            SameSite: http.SameSiteNoneMode,
             MaxAge:   86400,
         })
 
@@ -119,7 +120,8 @@ func Login(dbConn *sql.DB) http.HandlerFunc {
             Value:    token,
             Path:     "/",
             HttpOnly: true,
-            SameSite: http.SameSiteLaxMode,
+            Secure:   true,
+            SameSite: http.SameSiteNoneMode,
             MaxAge:   86400,
         })
 

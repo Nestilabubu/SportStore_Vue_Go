@@ -41,7 +41,9 @@ func main() {
     auth.HandleFunc("/statistics", handlers.GetStatistics(database)).Methods("GET")
 
     c := cors.New(cors.Options{
-        AllowedOrigins:   []string{"http://localhost:5173"},
+        AllowedOrigins : []string{
+            "https://sport-store-vue-go.vercel.app",
+        },
         AllowCredentials: true,
         AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
         AllowedHeaders:   []string{"Content-Type", "Authorization"},
