@@ -1,16 +1,17 @@
 package main
 
 import (
-    "log"
-    "net/http"
-    "os"
+	"log"
+	"net/http"
+	"os"
+	"strings"
 
-    "sportshop-backend/db"
-    "sportshop-backend/handlers"
-    "sportshop-backend/middleware"
+	"sportshop-backend/db"
+	"sportshop-backend/handlers"
+	"sportshop-backend/middleware"
 
-    "github.com/gorilla/mux"
-    "github.com/rs/cors"
+	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 func main() {
@@ -44,15 +45,23 @@ func main() {
 
     // Настройка CORS для продакшена
     allowedOrigins := []string{
-        "https://ваш-проект.vercel.app", // Замените на ваш URL на Vercel
-        "http://localhost:5173", // Для разработки
+        "https://sport-store-vue-go.vercel.app",
+        "https://sport-store-vue-go-git-main-nestilabubus-projects.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:3000",
+    }
+    
+    // Добавляем возможность указывать CORS через переменную окружения
+    if corsOrigins := os.Getenv("CORS_ORIGINS"); corsOrigins != "" {
+        allowedOrigins = strings.Split(corsOrigins, ",")
     }
     
     c := cors.New(cors.Options{
         AllowedOrigins:   allowedOrigins,
         AllowCredentials: true,
         AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-        AllowedHeaders:   []string{"Content-Type", "Authorization"},
+        AllowedHeaders:   []string{"Content-Type", "Authorization", "Cookie"},
+        ExposedHeaders:   []string{"Set-Cookie"},
     })
 
     handler := c.Handler(r)
@@ -63,5 +72,6 @@ func main() {
     }
     
     log.Printf("Server started on port %s", port)
+    log.Printf("CORS allowed origins: %v", allowedOrigins)
     log.Fatal(http.ListenAndServe(":"+port, handler))
 }

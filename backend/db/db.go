@@ -5,49 +5,88 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
 )
 
 func InitDB() *sql.DB {
-    host := os.Getenv("DB_HOST")
-    port := os.Getenv("DB_PORT")
-    user := os.Getenv("DB_USER")
-    password := os.Getenv("DB_PASSWORD")
-    dbname := os.Getenv("DB_NAME")
-
-    if host == "" {
-        host = "localhost"
+    // Пробуем получить DATABASE_URL от Railway
+    databaseURL := os.Getenv("DATABASE_URL")
+    psqlInfo := ""
+    
+    if databaseURL != "" {
+        // Railway предоставляет полный URL
+        psqlInfo = databaseURL
+        log.Println("Using DATABASE_URL from Railway")
+    } else {
+        // Fallback для локальной разработки
+        host := os.Getenv("DB_HOST")
+        if host == "" {
+            host = "localhost"
+        }
+        port := os.Getenv("DB_PORT")
+        if port == "" {
+            port = "5432"
+        }
+        user := os.Getenv("DB_USER")
+        if user == "" {
+            user = "postgres"
+        }
+        password := os.Getenv("DB_PASSWORD")
+        dbname := os.Getenv("DB_NAME")
+        if dbname == "" {
+            dbname = "railway"
+        }
+        
+        psqlInfo = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+            host, port, user, password, dbname)
+        log.Println("Using local database connection")
     }
-    if port == "" {
-        port = "5432"
-    }
-    if user == "" {
-        user = "sportuser"
-    }
-    if password == "" {
-        password = "sportpass"
-    }
-    if dbname == "" {
-        dbname = "sportshop"
-    }
-
-    psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-        host, port, user, password, dbname)
-
+    
+    log.Printf("Connecting to database with connection string: %s", maskPassword(psqlInfo))
+    
     db, err := sql.Open("postgres", psqlInfo)
     if err != nil {
         log.Fatal("Error opening database: ", err)
     }
-
-    err = db.Ping()
-    if err != nil {
-        log.Fatal("Error connecting to database: ", err)
+    
+    // Настройка пула соединений
+    db.SetMaxOpenConns(25)
+    db.SetMaxIdleConns(25)
+    db.SetConnMaxLifetime(5 * time.Minute)
+    
+    // Проверяем подключение с повторными попытками
+    maxRetries := 5
+    for i := 0; i < maxRetries; i++ {
+        err = db.Ping()
+        if err == nil {
+            break
+        }
+        log.Printf("Failed to connect to database (attempt %d/%d): %v", i+1, maxRetries, err)
+        if i == maxRetries-1 {
+            log.Fatal("Error connecting to database after retries: ", err)
+        }
+        time.Sleep(3 * time.Second)
     }
-
+    
     log.Println("Successfully connected to database")
     return db
+}
+
+// Вспомогательная функция для скрытия пароля в логах
+func maskPassword(connStr string) string {
+    // Ищем password= в строке подключения
+    if strings.Contains(connStr, "password=") {
+        parts := strings.Split(connStr, "password=")
+        if len(parts) > 1 {
+            passwordPart := strings.Split(parts[1], " ")[0]
+            masked := strings.Repeat("*", len(passwordPart))
+            return parts[0] + "password=" + masked + strings.TrimPrefix(parts[1], passwordPart)
+        }
+    }
+    return connStr
 }
 
 func CreateSession(db *sql.DB, token string, userID int, expiresAt time.Time) error {
