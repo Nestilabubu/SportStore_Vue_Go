@@ -35,7 +35,8 @@ func AuthRequired(dbConn *sql.DB) func(http.Handler) http.Handler {
                 Value:    cookie.Value,
                 Path:     "/",
                 HttpOnly: true,
-                SameSite: http.SameSiteLaxMode,
+                Secure:   true,                     // обязательно для HTTPS
+                SameSite: http.SameSiteNoneMode,   // разрешить кросс-домен
                 MaxAge:   86400,
             })
 

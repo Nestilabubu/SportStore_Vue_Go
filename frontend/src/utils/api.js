@@ -1,13 +1,12 @@
 import axios from "axios";
 
-// Определяем базовый URL в зависимости от окружения
 const getBaseURL = () => {
-  // Для продакшена на Vercel
   if (import.meta.env.PROD) {
-    // Используем переменную окружения или дефолтный URL Railway
-    return import.meta.env.VITE_API_URL || "https://sportstorevuego-production.up.railway.app/api";
+    return (
+      import.meta.env.VITE_API_URL ||
+      "https://sportstorevuego-production.up.railway.app/api"
+    );
   }
-  // Для локальной разработки
   return "http://localhost:8080/api";
 };
 
@@ -15,7 +14,7 @@ const api = axios.create({
   baseURL: getBaseURL(),
   withCredentials: true,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -27,7 +26,7 @@ api.interceptors.response.use(
       console.log("Unauthorized, please login");
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;
