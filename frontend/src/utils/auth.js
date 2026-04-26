@@ -14,7 +14,18 @@ export async function logout() {
   await api.post("/logout");
 }
 
+// Проверка наличия cookie session_token
+function hasSessionCookie() {
+  return document.cookie
+    .split(";")
+    .some((c) => c.trim().startsWith("session_token="));
+}
+
 export async function getCurrentUser() {
+  // Если нет cookie сессии – не делаем запрос, сразу возвращаем null
+  if (!hasSessionCookie()) {
+    return null;
+  }
   try {
     const response = await api.get("/profile", {
       validateStatus: (status) => status < 500,
@@ -29,13 +40,4 @@ export async function getCurrentUser() {
 export async function updateProfile(data) {
   const response = await api.put("/profile", data);
   return response.data;
-}
-export async function refreshSession() {
-  try {
-    await api.post("/refresh");
-    return true;
-  } catch (error) {
-    console.error("Ошибка обновления сессии", error);
-    return false;
-  }
 }
