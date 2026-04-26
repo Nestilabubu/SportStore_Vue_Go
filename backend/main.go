@@ -58,26 +58,26 @@ func main() {
     
     // Настройка CORS с динамическим разрешением origin
     c := cors.New(cors.Options{
-        AllowOriginFunc: func(origin string) bool {
-            // Для локальной разработки
-            if origin == "http://localhost:5173" || origin == "http://localhost:3000" {
-                return true
-            }
-            // Для production домена
-            if origin == "https://sport-store-vue-go.vercel.app" {
-                return true
-            }
-            // Для всех preview-доменов Vercel (заканчиваются на .vercel.app)
-            if strings.HasSuffix(origin, ".vercel.app") {
-                return true
-            }
-            return false
-        },
-        AllowCredentials: true,
-        AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-        AllowedHeaders:   []string{"Content-Type", "Authorization", "Cookie"},
-        ExposedHeaders:   []string{"Set-Cookie"},
-    })
+    AllowOriginFunc: func(origin string) bool {
+        // Разрешаем локальную разработку
+        if origin == "http://localhost:5173" || origin == "http://localhost:3000" {
+            return true
+        }
+        // Основной production домен
+        if origin == "https://sport-store-vue-go.vercel.app" {
+            return true
+        }
+        // Все превью-домены Vercel (заканчиваются на .vercel.app)
+        if strings.HasSuffix(origin, ".vercel.app") {
+            return true
+        }
+        return false
+    },
+    AllowCredentials: true,
+    AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+    AllowedHeaders:   []string{"Content-Type", "Authorization", "Cookie"},
+    ExposedHeaders:   []string{"Set-Cookie"},
+})
 
     handler := c.Handler(r)
 
