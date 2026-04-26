@@ -23,10 +23,6 @@ function hasSessionCookie() {
 
 export async function getCurrentUser() {
   console.log("getCurrentUser: checking cookie", document.cookie);
-  // if (!hasSessionCookie()) {
-  //   console.log("getCurrentUser: no session cookie");
-  //   return null;
-  // }
   try {
     const response = await api.get("/profile", {
       validateStatus: (status) => status < 500,

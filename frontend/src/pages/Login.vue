@@ -20,14 +20,11 @@ const validateForm = () => {
 };
 
 const handleSubmit = async () => {
-  console.log("Login button clicked");
   if (!validateForm()) return;
   isLoading.value = true;
   errors.value = {};
   try {
-    console.log("Sending login request", form.value.email);
     const response = await login(form.value);
-    console.log("Login response", response);
     await fetchUser();
     router.push("/profile");
   } catch (error) {
